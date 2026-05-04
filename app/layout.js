@@ -6,6 +6,14 @@ export const metadata = {
   keywords: "intelligence, jobs, scholarships, AI, automation, opportunities",
 };
 
+export const viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+  themeColor: '#06080c',
+};
+
 export default function RootLayout({ children }) {
   return (
     <html lang="en">

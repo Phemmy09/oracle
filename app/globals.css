@@ -762,13 +762,261 @@ body {
 ::-webkit-scrollbar-thumb { background: var(--border-dim); border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
 
-/* ===== RESPONSIVE ===== */
-@media (max-width: 900px) {
-  .sidebar { display: none; }
-  .main-content { margin-left: 0; }
-  .media-card { flex-direction: column; }
-  .media-card__thumbnail { width: 100%; height: 180px; }
-  .opportunity-item { grid-template-columns: 1fr; gap: 8px; }
+/* ===== MOBILE MENU BUTTON ===== */
+.mobile-menu-btn {
+  display: none;
+  background: none;
+  border: 1px solid var(--border-dim);
+  color: var(--accent-amber);
+  font-size: 18px;
+  padding: 2px 8px;
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: all var(--transition);
+  line-height: 1;
+}
+
+.mobile-menu-btn:hover {
+  background: var(--accent-amber);
+  color: var(--bg-void);
+}
+
+/* ===== SIDEBAR BACKDROP ===== */
+.sidebar-backdrop {
+  display: none;
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  z-index: 199;
+}
+
+/* ===== VISIBILITY HELPERS ===== */
+.hide-mobile, .hide-mobile-sm { /* visible by default */ }
+
+/* ===== RESPONSIVE — TABLET (≤768px) ===== */
+@media (max-width: 768px) {
+  .mobile-menu-btn { display: flex; align-items: center; justify-content: center; }
+  .sidebar-backdrop { display: block; }
+  .hide-mobile { display: none !important; }
+
+  /* Sidebar: off-screen, slides in */
+  .sidebar {
+    transform: translateX(-100%);
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    z-index: 200;
+    box-shadow: none;
+  }
+  .sidebar--open {
+    transform: translateX(0);
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.5);
+  }
+
+  .main-content {
+    margin-left: 0;
+    padding: 16px;
+  }
+
+  /* Status bar compact */
+  .status-bar {
+    padding: 0 12px;
+    gap: 8px;
+  }
+  .status-bar__left,
+  .status-bar__right {
+    gap: 8px;
+  }
+  .status-bar__logo {
+    font-size: 11px;
+    letter-spacing: 0.1em;
+  }
+
+  /* Panel adjustments */
+  .panel__header {
+    padding: 12px 14px;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .panel__title {
+    font-size: 10px;
+  }
+  .panel__body {
+    padding: 12px 14px;
+  }
+
+  /* Opportunity items stack */
+  .opportunity-item {
+    grid-template-columns: 1fr;
+    gap: 8px;
+    padding: 14px 12px;
+  }
+  .opportunity-item__title {
+    white-space: normal;
+    font-size: 13px;
+    line-height: 1.4;
+  }
+  .opportunity-item__meta {
+    gap: 8px;
+  }
+  .opportunity-item__tag {
+    display: inline-block;
+    width: fit-content;
+  }
+  .opportunity-item__link {
+    width: fit-content;
+    padding: 6px 14px;
+  }
+
+  /* Media cards stack */
+  .media-card {
+    flex-direction: column;
+    gap: 12px;
+  }
+  .media-card__thumbnail {
+    width: 100%;
+    min-width: unset;
+    height: 180px;
+  }
+  .media-card__title {
+    font-size: 14px;
+  }
+
+  /* Intel items */
+  .intel-item {
+    padding: 12px 14px;
+  }
+  .intel-item__title {
+    font-size: 13px;
+  }
+  .intel-item__summary {
+    font-size: 12px;
+  }
+
+  /* Todo touch-friendly */
+  .todo-item {
+    padding: 12px 10px;
+    gap: 10px;
+  }
+  .todo-item__checkbox {
+    width: 22px;
+    height: 22px;
+    font-size: 12px;
+  }
+  .todo-item__delete {
+    opacity: 1;
+    font-size: 18px;
+    padding: 4px;
+  }
+  .todo-input {
+    font-size: 14px;
+    padding: 12px 14px;
+  }
+  .todo-btn {
+    padding: 12px 16px;
+  }
+
+  /* Profile cards */
+  .profile-card {
+    padding: 16px;
+  }
+  .profile-card__name {
+    font-size: 14px;
+  }
+  .profile-card__analysis {
+    font-size: 13px;
+  }
+}
+
+/* ===== RESPONSIVE — SMALL PHONE (≤480px) ===== */
+@media (max-width: 480px) {
+  .hide-mobile-sm { display: none !important; }
+
+  .status-bar {
+    height: 44px;
+    padding: 0 10px;
+  }
+  .app-container {
+    margin-top: 44px;
+    min-height: calc(100vh - 44px);
+  }
+
+  .main-content {
+    padding: 10px;
+  }
+
+  .panel {
+    margin-bottom: 16px;
+    border-radius: 6px;
+  }
+  .panel__header {
+    padding: 10px 12px;
+  }
+  .panel__body {
+    padding: 10px 12px;
+  }
+  .panel__title {
+    font-size: 9px;
+    gap: 6px;
+  }
+  .panel__badge {
+    font-size: 8px;
+    padding: 2px 6px;
+  }
+
+  .opportunity-item {
+    padding: 12px 8px;
+  }
+  .opportunity-item__title {
+    font-size: 12px;
+  }
+  .opportunity-item__meta {
+    font-size: 10px;
+    gap: 6px;
+  }
+  .opportunity-item__link {
+    font-size: 9px;
+    padding: 5px 10px;
+  }
+
+  .media-card {
+    padding: 12px;
+  }
+  .media-card__thumbnail {
+    height: 150px;
+  }
+
+  /* Notes category buttons wrap tightly */
+  .todo-input-row {
+    flex-direction: column;
+    gap: 8px;
+  }
+  .todo-btn {
+    width: 100%;
+  }
+
+  .loading-text {
+    font-size: 12px;
+  }
+  .loading-sub {
+    font-size: 10px;
+  }
+}
+
+/* ===== RESPONSIVE — VERY SMALL (≤360px) ===== */
+@media (max-width: 360px) {
+  .status-bar__logo {
+    font-size: 10px;
+    letter-spacing: 0.05em;
+  }
+  .main-content {
+    padding: 8px;
+  }
+  .panel__header {
+    padding: 8px 10px;
+  }
+  .panel__body {
+    padding: 8px 10px;
+  }
 }
 
 /* ===== FADE IN ANIMATION ===== */

@@ -6,7 +6,7 @@ import TodoPanel from './components/TodoPanel';
 import NotesPanel from './components/NotesPanel';
 
 // ===== STATUS BAR =====
-function StatusBar({ status, briefingDate }) {
+function StatusBar({ status, briefingDate, onMenuToggle }) {
   const [time, setTime] = useState('');
   useEffect(() => {
     const tick = () => setTime(new Date().toLocaleTimeString('en-GB', { hour12: false }));
@@ -18,16 +18,17 @@ function StatusBar({ status, briefingDate }) {
   return (
     <div className="status-bar">
       <div className="status-bar__left">
+        <button className="mobile-menu-btn" onClick={onMenuToggle} aria-label="Toggle menu">☰</button>
         <span className="status-bar__logo">◆ ORACLE</span>
-        <span style={{ color: 'var(--text-muted)' }}>v1.0</span>
+        <span className="hide-mobile" style={{ color: 'var(--text-muted)' }}>v1.0</span>
       </div>
-      <div className="status-bar__center">
+      <div className="status-bar__center hide-mobile">
         <span style={{ color: 'var(--text-secondary)' }}>{briefingDate ? `BRIEFING // ${briefingDate}` : 'AWAITING INITIALIZATION'}</span>
       </div>
       <div className="status-bar__right">
         <div className="status-indicator">
           <div className={`status-dot ${status === 'loading' ? 'status-dot--loading' : status === 'error' ? 'status-dot--error' : ''}`} />
-          <span>{status === 'loading' ? 'GENERATING' : status === 'error' ? 'ERROR' : 'SYSTEM ACTIVE'}</span>
+          <span className="hide-mobile-sm">{status === 'loading' ? 'GENERATING' : status === 'error' ? 'ERROR' : 'SYSTEM ACTIVE'}</span>
         </div>
         <span style={{ color: 'var(--accent-cyan)' }}>{time}</span>
       </div>
@@ -36,7 +37,7 @@ function StatusBar({ status, briefingDate }) {
 }
 
 // ===== SIDEBAR =====
-function Sidebar({ activeSection, onNavigate, counts }) {
+function Sidebar({ activeSection, onNavigate, counts, isOpen, onClose }) {
   const sections = [
     { id: 'jobs', icon: '💼', label: 'Job Matrix', count: counts.jobs },
     { id: 'scholarships', icon: '🎓', label: 'Scholarships', count: counts.scholarships },
@@ -47,21 +48,30 @@ function Sidebar({ activeSection, onNavigate, counts }) {
     { id: 'todos', icon: '✅', label: 'Todo Ops' },
     { id: 'notes', icon: '📓', label: 'Field Notes' },
   ];
+
+  const handleNav = (s) => {
+    onNavigate(s);
+    onClose();
+  };
+
   return (
-    <nav className="sidebar">
-      <div className="sidebar__section-label">Intelligence Panels</div>
-      {sections.map(s => (
-        <a key={s.id} className={`sidebar__item ${activeSection === s.id ? 'sidebar__item--active' : ''}`}
-          onClick={() => onNavigate(s.id)} href={`#${s.id}`}>
-          <span className="sidebar__item-icon">{s.icon}</span><span>{s.label}</span>
-          {s.count != null && <span className="sidebar__item-count">{s.count}</span>}
+    <>
+      {isOpen && <div className="sidebar-backdrop" onClick={onClose} />}
+      <nav className={`sidebar ${isOpen ? 'sidebar--open' : ''}`}>
+        <div className="sidebar__section-label">Intelligence Panels</div>
+        {sections.map(s => (
+          <a key={s.id} className={`sidebar__item ${activeSection === s.id ? 'sidebar__item--active' : ''}`}
+            onClick={() => handleNav(s.id)} href={`#${s.id}`}>
+            <span className="sidebar__item-icon">{s.icon}</span><span>{s.label}</span>
+            {s.count != null && <span className="sidebar__item-count">{s.count}</span>}
+          </a>
+        ))}
+        <div className="sidebar__section-label" style={{ marginTop: 20 }}>System</div>
+        <a className="sidebar__item" onClick={() => handleNav('refresh')} href="#">
+          <span className="sidebar__item-icon">🔄</span><span>Regenerate</span>
         </a>
-      ))}
-      <div className="sidebar__section-label" style={{ marginTop: 20 }}>System</div>
-      <a className="sidebar__item" onClick={() => onNavigate('refresh')} href="#">
-        <span className="sidebar__item-icon">🔄</span><span>Regenerate</span>
-      </a>
-    </nav>
+      </nav>
+    </>
   );
 }
 
@@ -79,6 +89,7 @@ function LoadingOverlay() {
 // ===== MAIN DASHBOARD =====
 function Dashboard() {
   const [data, setData] = useState(null);
+  const [menuOpen, setMenuOpen] = useState(false);
   const [status, setStatus] = useState('idle');
   const [activeSection, setActiveSection] = useState('jobs');
 
@@ -122,10 +133,10 @@ function Dashboard() {
 
   return (
     <>
-      <StatusBar status={status} briefingDate={briefingDate} />
+      <StatusBar status={status} briefingDate={briefingDate} onMenuToggle={() => setMenuOpen(o => !o)} />
       {status === 'loading' && <LoadingOverlay />}
       <div className="app-container">
-        <Sidebar activeSection={activeSection} onNavigate={handleNavigate} counts={counts} />
+        <Sidebar activeSection={activeSection} onNavigate={handleNavigate} counts={counts} isOpen={menuOpen} onClose={() => setMenuOpen(false)} />
         <main className="main-content">
 
           {/* JOBS */}
