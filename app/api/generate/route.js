@@ -6,6 +6,8 @@
 import {
   JOB_SOURCES, JOB_KEYWORDS,
   SCHOLARSHIP_SOURCES, SCHOLARSHIP_KEYWORDS, ELITE_SOURCES,
+  CURATED_SCHOLARSHIPS,
+  BUSINESS_GRANT_SOURCES, BUSINESS_GRANT_KEYWORDS, CURATED_GRANTS,
   NEWS_SOURCES, VIDEO_CHANNELS,
   BOOK_ROTATION, RAINMAKER_PROFILES, NIGHT_SCHOOL_CASES,
 } from '../../lib/data-sources';
@@ -176,7 +178,64 @@ async function fetchScholarships() {
     return true;
   });
 
-  return unique.slice(0, 15);
+  // Merge with curated list (always include top scholarships)
+  const liveKeys = new Set(unique.map(o => o.title.toLowerCase().slice(0, 50)));
+  const freshCurated = CURATED_SCHOLARSHIPS.filter(c => !liveKeys.has(c.title.toLowerCase().slice(0, 50)));
+  const combined = [...unique, ...freshCurated];
+
+  return combined; // No limit — show all available scholarships
+}
+
+// ===== FETCH BUSINESS GRANTS =====
+async function fetchBusinessGrants() {
+  const allGrants = [];
+
+  for (const source of BUSINESS_GRANT_SOURCES) {
+    try {
+      const res = await fetch(source.url, {
+        headers: { 'User-Agent': 'OracleIntelligenceEngine/1.0' },
+        signal: AbortSignal.timeout(7000),
+      });
+      if (!res.ok) continue;
+      const text = await res.text();
+
+      const titles = extractFromXML(text, 'title');
+      const links = extractFromXML(text, 'link');
+      const descriptions = extractFromXML(text, 'description');
+      const pubDates = extractFromXML(text, 'pubDate');
+
+      for (let i = 1; i < titles.length && i < 15; i++) {
+        allGrants.push({
+          title: decodeEntities(stripCDATA(titles[i] || '')),
+          link: stripCDATA(links[i] || ''),
+          summary: decodeEntities(stripHTML(stripCDATA(descriptions[i] || ''))).slice(0, 250),
+          date: pubDates[i - 1] || '',
+          source: source.name,
+          focus: source.focus,
+        });
+      }
+    } catch (e) {
+      console.error(`[ORACLE] Failed to fetch grants from ${source.name}:`, e.message);
+    }
+  }
+
+  const filtered = allGrants.filter(g => {
+    const text = `${g.title} ${g.summary}`.toLowerCase();
+    return BUSINESS_GRANT_KEYWORDS.some(kw => text.includes(kw.toLowerCase()));
+  });
+
+  const seen = new Set();
+  const unique = filtered.filter(g => {
+    const key = g.title.toLowerCase().slice(0, 50);
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+
+  // Always merge with curated grants
+  const liveKeys = new Set(unique.map(g => g.title.toLowerCase().slice(0, 50)));
+  const freshCurated = CURATED_GRANTS.filter(c => !liveKeys.has(c.title.toLowerCase().slice(0, 50)));
+  return [...unique, ...freshCurated].slice(0, 25);
 }
 
 // ===== FETCH NEWS/INTEL =====
@@ -285,9 +344,10 @@ export async function GET() {
     const startTime = Date.now();
 
     // Fetch all data concurrently
-    const [jobs, scholarships, intel, video] = await Promise.allSettled([
+    const [jobs, scholarships, grants, intel, video] = await Promise.allSettled([
       fetchJobs(),
       fetchScholarships(),
+      fetchBusinessGrants(),
       fetchIntel(),
       fetchVideo(),
     ]);
@@ -299,7 +359,8 @@ export async function GET() {
       generatedAt: new Date().toISOString(),
       fetchTimeMs: elapsed,
       jobs: jobs.status === 'fulfilled' ? jobs.value : [],
-      scholarships: scholarships.status === 'fulfilled' ? scholarships.value : [],
+      scholarships: scholarships.status === 'fulfilled' ? scholarships.value : CURATED_SCHOLARSHIPS,
+      grants: grants.status === 'fulfilled' ? grants.value : CURATED_GRANTS,
       intel: intel.status === 'fulfilled' ? intel.value : [],
       video: video.status === 'fulfilled' ? video.value : null,
       book: curated.book,
@@ -317,6 +378,7 @@ export async function GET() {
           fetch_time_ms: briefing.fetchTimeMs,
           jobs: briefing.jobs,
           scholarships: briefing.scholarships,
+          grants: briefing.grants,
           intel: briefing.intel,
           video: briefing.video,
           book: briefing.book,

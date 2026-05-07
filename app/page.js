@@ -42,6 +42,7 @@ function Sidebar({ activeSection, onNavigate, counts, isOpen, onClose }) {
     { id: 'jobs', icon: '💼', label: 'Job Matrix', count: counts.jobs },
     { id: 'scholarships', icon: '🎓', label: 'Scholarships', count: counts.scholarships },
     { id: 'opportunities', icon: '🌍', label: 'Elite Opps', count: counts.opportunities },
+    { id: 'grants', icon: '💰', label: 'Business Grants', count: counts.grants },
     { id: 'intel', icon: '🔐', label: 'Inner Brief', count: counts.intel },
     { id: 'economy', icon: '🎯', label: 'Economy of Mind' },
     { id: 'archetypes', icon: '👤', label: 'Archetypes' },
@@ -124,12 +125,13 @@ function Dashboard() {
   const briefingDate = data?.generatedAt ? new Date(data.generatedAt).toLocaleDateString('en-GB', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) : null;
 
   const scholarships = data?.scholarships?.filter(s => {
-    const t = s.title.toLowerCase();
-    return t.includes('scholarship') || t.includes('fellowship') || t.includes('funded') || t.includes('phd') || t.includes('master');
+    const t = (s.title + ' ' + (s.focus || '')).toLowerCase();
+    return t.includes('scholarship') || t.includes('fellowship') || t.includes('funded') || t.includes('phd') || t.includes('master') || t.includes('scholars') || t.includes('award') || t.includes('programme') || t.includes('program') || t.includes('bursary') || t.includes('stipend') || t.includes('foundation') || t.includes('tuition') || t.includes('postgrad') || t.includes('grant');
   }) || [];
   const eliteOpps = data?.scholarships?.filter(s => !scholarships.includes(s)) || [];
+  const grants = data?.grants || [];
 
-  const counts = { jobs: data?.jobs?.length || 0, scholarships: scholarships.length, opportunities: eliteOpps.length, intel: data?.intel?.length || 0 };
+  const counts = { jobs: data?.jobs?.length || 0, scholarships: scholarships.length, opportunities: eliteOpps.length, grants: grants.length, intel: data?.intel?.length || 0 };
 
   return (
     <>
@@ -211,6 +213,37 @@ function Dashboard() {
                         {o.summary && <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 4, lineHeight: 1.4 }}>{o.summary}</p>}
                       </div>
                       <a className="opportunity-item__link" href={o.link} target="_blank" rel="noopener noreferrer">View →</a>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* BUSINESS GRANTS */}
+          <div className="panel fade-in fade-in-delay-2" id="grants">
+            <div className="panel__header">
+              <div className="panel__title"><span className="panel__title-icon">💰</span> Business Grants &amp; Funding — Young Africans</div>
+              <span className="panel__badge panel__badge--live">{grants.length} FOUND</span>
+            </div>
+            <div className="panel__body">
+              {!grants.length ? (
+                <div className="empty-state"><div className="empty-state__icon">💰</div><div className="empty-state__text">Scanning grant databases...</div></div>
+              ) : (
+                <div className="opportunity-list">
+                  {grants.map((g, i) => (
+                    <div className="opportunity-item" key={i}>
+                      <div className="opportunity-item__info">
+                        <a className="opportunity-item__title" href={g.link} target="_blank" rel="noopener noreferrer">{g.title}</a>
+                        <div className="opportunity-item__meta">
+                          <span>🏦 {g.source}</span>
+                          {g.focus && <span>🎯 {g.focus}</span>}
+                          {g.date && <span>📅 {new Date(g.date).toLocaleDateString()}</span>}
+                        </div>
+                        {g.summary && <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 4, lineHeight: 1.4 }}>{g.summary}</p>}
+                      </div>
+                      <span className="opportunity-item__tag" style={{ background: 'rgba(251,191,36,0.15)', color: '#fbbf24', border: '1px solid rgba(251,191,36,0.3)' }}>GRANT</span>
+                      <a className="opportunity-item__link" href={g.link} target="_blank" rel="noopener noreferrer">Apply →</a>
                     </div>
                   ))}
                 </div>
