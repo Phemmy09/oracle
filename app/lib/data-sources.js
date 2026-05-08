@@ -6,28 +6,39 @@
 // ============================================
 
 // ===== JOB SOURCES =====
-// Remote jobs in: n8n, AI agents, AI automation, GoHighLevel, 
-// sales funnels, email marketing, website building, AI voice agents
+// 16 zero-login sources: job boards, RSS feeds, Reddit communities, HN
+// requiresKeywordMatch: false = take ALL jobs (source is already remote-specific)
+// requiresKeywordMatch: true  = keyword-filter applies (mixed content sources)
 export const JOB_SOURCES = [
-  {
-    name: 'RemoteOK',
-    url: 'https://remoteok.com/api',
-    type: 'json',
-    tags: ['remote'],
-  },
-  {
-    name: 'Remotive',
-    url: 'https://remotive.com/api/remote-jobs?limit=30',
-    type: 'json',
-  },
-  {
-    name: 'Arbeitnow',
-    url: 'https://www.arbeitnow.com/api/job-board-api',
-    type: 'json',
-  },
+  // ─── EXISTING JSON APIS ───
+  { name: 'RemoteOK',      url: 'https://remoteok.com/api',                                                                              type: 'json',   requiresKeywordMatch: true },
+  { name: 'Remotive',      url: 'https://remotive.com/api/remote-jobs?limit=50',                                                         type: 'json',   requiresKeywordMatch: true },
+  { name: 'Arbeitnow',     url: 'https://www.arbeitnow.com/api/job-board-api',                                                           type: 'json',   requiresKeywordMatch: true },
+
+  // ─── NEW JSON APIS (no auth) ───
+  { name: 'WorkingNomads', url: 'https://www.workingnomads.com/api/exposed_jobs/',                                                        type: 'json',   requiresKeywordMatch: false },
+  { name: 'TheMuse',       url: 'https://www.themuse.com/api/public/jobs?page=0&descending=true',                                         type: 'json',   requiresKeywordMatch: true },
+
+  // ─── RSS JOB BOARDS (no auth) ───
+  { name: 'WeWorkRemotely', url: 'https://weworkremotely.com/remote-jobs.rss',                                                           type: 'rss',    requiresKeywordMatch: false },
+  { name: 'Jobicy',         url: 'https://jobicy.com/?feed=job_feed',                                                                    type: 'rss',    requiresKeywordMatch: false },
+  { name: 'RemoteCo',       url: 'https://remote.co/remote-jobs/feed/',                                                                  type: 'rss',    requiresKeywordMatch: false },
+  { name: 'Himalayas',      url: 'https://himalayas.app/jobs/feed.xml',                                                                  type: 'rss',    requiresKeywordMatch: false },
+  { name: '4DayWeek',       url: 'https://4dayweek.io/remote-jobs/feed',                                                                 type: 'rss',    requiresKeywordMatch: false },
+  { name: 'NoDesk',         url: 'https://nodesk.co/remote-jobs/feed/',                                                                  type: 'rss',    requiresKeywordMatch: false },
+  { name: 'DevToJobs',      url: 'https://dev.to/feed/tag/jobs',                                                                         type: 'rss',    requiresKeywordMatch: true },
+
+  // ─── REDDIT COMMUNITIES (no auth, public JSON API) ───
+  { name: 'RedditForHire',   url: 'https://www.reddit.com/r/forhire/search.json?q=%5BHIRING%5D&restrict_sr=on&sort=new&t=week&limit=25', type: 'reddit', requiresKeywordMatch: false },
+  { name: 'RedditAIJobs',    url: 'https://www.reddit.com/r/AIJobs/.json?sort=new&limit=25',                                             type: 'reddit', requiresKeywordMatch: false },
+  { name: 'RedditFreelance', url: 'https://www.reddit.com/r/freelance/search.json?q=hiring&restrict_sr=on&sort=new&t=week&limit=20',     type: 'reddit', requiresKeywordMatch: true },
+
+  // ─── HACKER NEWS (Algolia API, no auth) ───
+  { name: 'HNJobs', url: 'https://hn.algolia.com/api/v1/search?tags=job&hitsPerPage=30',                                                 type: 'hn',     requiresKeywordMatch: true },
 ];
 
 export const JOB_KEYWORDS = [
+  // AI/automation stack
   'n8n', 'ai agent', 'ai automation', 'automation engineer',
   'gohighlevel', 'highlevel', 'sales funnel', 'email marketing',
   'website builder', 'ai voice', 'voice agent', 'chatbot',
@@ -36,6 +47,14 @@ export const JOB_KEYWORDS = [
   'zapier', 'make.com', 'workflow automation', 'no-code',
   'low-code', 'crm', 'saas', 'api integration',
   'ai consultant', 'ai governance', 'data engineer',
+  // Broad tech/remote roles
+  'ai', 'artificial intelligence', 'automation', 'agent',
+  'remote', 'developer', 'engineer', 'software', 'full stack',
+  'frontend', 'backend', 'react', 'node', 'python',
+  'typescript', 'javascript', 'devops', 'cloud', 'aws',
+  'freelance', 'contract', 'async', 'part-time',
+  'marketing automation', 'growth', 'product manager',
+  'technical writer', 'content', 'seo', 'data',
 ];
 
 // ===== SCHOLARSHIP & OPPORTUNITY SOURCES =====

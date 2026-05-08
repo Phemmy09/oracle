@@ -44,87 +44,222 @@ function decodeEntities(str) {
   return result;
 }
 
+// ===== JOB PARSERS =====
+
+function parseWorkingNomads(data, source) {
+  return (data.jobs || []).map(job => ({
+    title: decodeEntities(job.title || ''),
+    company: job.company || 'Unknown',
+    location: job.location || 'Remote',
+    salary: job.salary || '',
+    link: job.url || '',
+    tags: Array.isArray(job.tags) ? job.tags : (job.tags ? job.tags.split(',').map(t => t.trim()) : []),
+    source: source.name,
+    date: job.pub_date || '',
+    type: 'remote',
+  }));
+}
+
+function parseTheMuse(data, source) {
+  return (data.results || []).map(job => ({
+    title: decodeEntities(job.name || ''),
+    company: job.company?.name || 'Unknown',
+    location: job.locations?.[0]?.name || 'Remote',
+    salary: '',
+    link: job.refs?.landing_page || '',
+    tags: (job.categories || []).map(c => c.name),
+    source: source.name,
+    date: job.publication_date || '',
+    type: 'remote',
+  }));
+}
+
+function parseJobRSS(xmlText, source) {
+  // Support both RSS <item> and Atom <entry> (e.g. Himalayas)
+  const blocks = xmlText.match(/<item[\s\S]*?<\/item>/gi)
+                 || xmlText.match(/<entry[\s\S]*?<\/entry>/gi)
+                 || [];
+  return blocks.map(block => {
+    const title = decodeEntities(stripCDATA(extractFromXML(block, 'title')[0] || ''));
+    // RSS uses <link>url</link>; Atom uses <link href="url"/> (self-closing)
+    const rssLink = stripCDATA(extractFromXML(block, 'link')[0] || '');
+    const atomLink = block.match(/<link[^>]+href="([^"]+)"/i)?.[1] || '';
+    const link = rssLink || atomLink;
+    const pubDate = extractFromXML(block, 'pubDate')[0] || extractFromXML(block, 'published')[0] || '';
+
+    let cleanTitle = title;
+    let company = 'Unknown';
+    // WeWorkRemotely format: "Category: Job Title at Company"
+    if (source.name === 'WeWorkRemotely') {
+      const colonIdx = title.indexOf(': ');
+      if (colonIdx > -1) cleanTitle = title.slice(colonIdx + 2);
+    }
+    const atIdx = cleanTitle.lastIndexOf(' at ');
+    if (atIdx > -1) {
+      company = cleanTitle.slice(atIdx + 4).trim();
+      cleanTitle = cleanTitle.slice(0, atIdx).trim();
+    }
+
+    if (!cleanTitle || !link) return null;
+    return { title: cleanTitle, company, location: 'Remote', salary: '', link, tags: [], source: source.name, date: pubDate, type: 'remote' };
+  }).filter(Boolean);
+}
+
+function parseRedditJSON(data, source) {
+  const children = data?.data?.children || [];
+  return children.map(child => {
+    const post = child.data || {};
+    if (post.stickied) return null;
+    const title = post.title || '';
+    // r/forhire and r/freelance: only keep [HIRING] posts, skip [FOR HIRE]
+    if ((source.name === 'RedditForHire' || source.name === 'RedditFreelance') && !title.toLowerCase().includes('[hiring]')) return null;
+
+    let cleanTitle = title.replace(/^\[HIRING\]\s*/i, '').trim();
+    let company = 'Unknown';
+    // Common format: "[HIRING] Role Title | Company Name | $X/hr | Remote"
+    const pipes = cleanTitle.split('|');
+    if (pipes.length >= 2) { cleanTitle = pipes[0].trim(); company = pipes[1].trim(); }
+
+    const salaryMatch = title.match(/\$[\d,]+(?:\/(?:hr|year|mo))?(?:\s*-\s*\$[\d,]+)?/i);
+    return {
+      title: cleanTitle, company, location: 'Remote',
+      salary: salaryMatch ? salaryMatch[0] : '',
+      link: `https://www.reddit.com${post.permalink || ''}`,
+      tags: post.link_flair_text ? [post.link_flair_text] : [],
+      source: source.name,
+      date: post.created_utc ? new Date(post.created_utc * 1000).toISOString() : '',
+      type: 'remote',
+    };
+  }).filter(Boolean);
+}
+
+function parseHNJobs(data, source) {
+  return (data?.hits || []).map(hit => {
+    let title = hit.title || '';
+    let company = 'Unknown';
+    // HN format: "Company (YC S24) is hiring a Senior Engineer"
+    const isHiringIdx = title.toLowerCase().indexOf(' is hiring');
+    if (isHiringIdx > -1) {
+      company = title.slice(0, isHiringIdx).trim();
+      title = title.slice(isHiringIdx + 11).replace(/^a\s+/i, '').trim();
+    }
+    return {
+      title: decodeEntities(title), company, location: 'Remote', salary: '',
+      link: hit.url || `https://news.ycombinator.com/item?id=${hit.objectID}`,
+      tags: ['hacker-news'], source: source.name, date: hit.created_at || '', type: 'remote',
+    };
+  });
+}
+
 // ===== FETCH JOBS =====
 async function fetchJobs() {
-  const allJobs = [];
+  const TIMEOUT = 10000;
 
-  for (const source of JOB_SOURCES) {
-    try {
-      const res = await fetch(source.url, {
-        headers: { 'User-Agent': 'OracleIntelligenceEngine/1.0' },
-        signal: AbortSignal.timeout(8000),
-      });
-      if (!res.ok) continue;
+  async function fetchOneSource(source) {
+    const headers = {
+      'User-Agent': source.type === 'reddit'
+        ? 'OracleBot/1.0 (job aggregator; contact: oracle@example.com)'
+        : 'Mozilla/5.0 (compatible; OracleBot/1.0)',
+      'Accept': (source.type === 'json' || source.type === 'reddit' || source.type === 'hn')
+        ? 'application/json'
+        : 'application/rss+xml, application/xml, text/xml, */*',
+    };
+
+    if (source.type === 'json') {
+      const res = await fetch(source.url, { headers, signal: AbortSignal.timeout(TIMEOUT) });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
-
       if (source.name === 'RemoteOK') {
-        // RemoteOK returns array, first item is legal notice
-        const jobs = Array.isArray(data) ? data.slice(1) : [];
-        for (const job of jobs) {
-          allJobs.push({
-            title: decodeEntities(job.position || job.title || ''),
-            company: job.company || 'Unknown',
-            location: job.location || 'Remote',
-            salary: job.salary || '',
-            link: job.url || job.apply_url || `https://remoteok.com/remote-jobs/${job.slug || ''}`,
-            tags: job.tags || [],
-            source: 'RemoteOK',
-            date: job.date || '',
-            type: 'remote',
-          });
-        }
-      } else if (source.name === 'Remotive') {
-        const jobs = data.jobs || [];
-        for (const job of jobs) {
-          allJobs.push({
-            title: decodeEntities(job.title || ''),
-            company: job.company_name || 'Unknown',
-            location: job.candidate_required_location || 'Remote',
-            salary: job.salary || '',
-            link: job.url || '',
-            tags: [job.category || ''],
-            source: 'Remotive',
-            date: job.publication_date || '',
-            type: 'remote',
-          });
-        }
-      } else if (source.name === 'Arbeitnow') {
-        const jobs = data.data || [];
-        for (const job of jobs) {
-          allJobs.push({
-            title: decodeEntities(job.title || ''),
-            company: job.company_name || 'Unknown',
-            location: job.location || 'Remote',
-            salary: job.salary || '',
-            link: job.url || '',
-            tags: job.tags || [],
-            source: 'Arbeitnow',
-            date: job.created_at || '',
-            type: job.remote ? 'remote' : 'visa',
-          });
-        }
+        return (Array.isArray(data) ? data.slice(1) : []).map(job => ({
+          title: decodeEntities(job.position || job.title || ''),
+          company: job.company || 'Unknown',
+          location: job.location || 'Remote',
+          salary: job.salary || '',
+          link: job.url || job.apply_url || `https://remoteok.com/remote-jobs/${job.slug || ''}`,
+          tags: job.tags || [], source: 'RemoteOK', date: job.date || '', type: 'remote',
+        }));
       }
-    } catch (e) {
-      console.error(`[ORACLE] Failed to fetch jobs from ${source.name}:`, e.message);
+      if (source.name === 'Remotive') {
+        return (data.jobs || []).map(job => ({
+          title: decodeEntities(job.title || ''),
+          company: job.company_name || 'Unknown',
+          location: job.candidate_required_location || 'Remote',
+          salary: job.salary || '',
+          link: job.url || '', tags: [job.category || ''],
+          source: 'Remotive', date: job.publication_date || '', type: 'remote',
+        }));
+      }
+      if (source.name === 'Arbeitnow') {
+        return (data.data || []).map(job => ({
+          title: decodeEntities(job.title || ''),
+          company: job.company_name || 'Unknown',
+          location: job.location || 'Remote',
+          salary: job.salary || '',
+          link: job.url || '', tags: job.tags || [],
+          source: 'Arbeitnow', date: job.created_at || '', type: job.remote ? 'remote' : 'visa',
+        }));
+      }
+      if (source.name === 'WorkingNomads') return parseWorkingNomads(data, source);
+      if (source.name === 'TheMuse') return parseTheMuse(data, source);
+      return [];
+    }
+
+    if (source.type === 'rss') {
+      const res = await fetch(source.url, { headers, signal: AbortSignal.timeout(TIMEOUT) });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      return parseJobRSS(await res.text(), source);
+    }
+
+    if (source.type === 'reddit') {
+      const res = await fetch(source.url, { headers, signal: AbortSignal.timeout(TIMEOUT) });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      return parseRedditJSON(await res.json(), source);
+    }
+
+    if (source.type === 'hn') {
+      const res = await fetch(source.url, { headers, signal: AbortSignal.timeout(TIMEOUT) });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      return parseHNJobs(await res.json(), source);
+    }
+
+    return [];
+  }
+
+  // All 16 sources fire concurrently — individual failures degrade gracefully
+  const results = await Promise.allSettled(
+    JOB_SOURCES.map(source =>
+      fetchOneSource(source).catch(err => {
+        console.error(`[ORACLE] Jobs ${source.name} failed:`, err.message);
+        return [];
+      })
+    )
+  );
+
+  const allJobs = [];
+  for (let i = 0; i < results.length; i++) {
+    const source = JOB_SOURCES[i];
+    const jobs = results[i].status === 'fulfilled' ? results[i].value : [];
+    if (source.requiresKeywordMatch === false) {
+      allJobs.push(...jobs);
+    } else {
+      allJobs.push(...jobs.filter(job => {
+        const text = `${job.title} ${job.company} ${(job.tags || []).join(' ')}`.toLowerCase();
+        return JOB_KEYWORDS.some(kw => text.includes(kw.toLowerCase()));
+      }));
     }
   }
 
-  // Filter by keywords
-  const filtered = allJobs.filter(job => {
-    const searchText = `${job.title} ${job.company} ${job.tags.join(' ')}`.toLowerCase();
-    return JOB_KEYWORDS.some(kw => searchText.includes(kw.toLowerCase()));
-  });
-
-  // Deduplicate by title similarity
+  // Deduplicate by title similarity (first 40 chars)
   const seen = new Set();
-  const unique = filtered.filter(job => {
+  const unique = allJobs.filter(job => {
     const key = job.title.toLowerCase().slice(0, 40);
     if (seen.has(key)) return false;
     seen.add(key);
     return true;
   });
 
-  return unique.slice(0, 20);
+  unique.sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
+  return unique.slice(0, 60);
 }
 
 // ===== FETCH SCHOLARSHIPS & OPPORTUNITIES =====
