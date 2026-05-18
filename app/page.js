@@ -43,6 +43,7 @@ function Sidebar({ activeSection, onNavigate, counts, isOpen, onClose }) {
     { id: 'scholarships', icon: '🎓', label: 'Scholarships', count: counts.scholarships },
     { id: 'opportunities', icon: '🌍', label: 'Elite Opps', count: counts.opportunities },
     { id: 'grants', icon: '💰', label: 'Business Grants', count: counts.grants },
+    { id: 'network', icon: '⚡', label: 'Power Network', count: counts.network },
     { id: 'intel', icon: '🔐', label: 'Inner Brief', count: counts.intel },
     { id: 'economy', icon: '🎯', label: 'Economy of Mind' },
     { id: 'archetypes', icon: '👤', label: 'Archetypes' },
@@ -131,7 +132,7 @@ function Dashboard() {
   const eliteOpps = data?.scholarships?.filter(s => !scholarships.includes(s)) || [];
   const grants = data?.grants || [];
 
-  const counts = { jobs: data?.jobs?.length || 0, scholarships: scholarships.length, opportunities: eliteOpps.length, grants: grants.length, intel: data?.intel?.length || 0 };
+  const counts = { jobs: data?.jobs?.length || 0, scholarships: scholarships.length, opportunities: eliteOpps.length, grants: grants.length, intel: data?.intel?.length || 0, network: (data?.network?.communities?.length || 0) + (data?.network?.contacts?.length || 0) };
 
   return (
     <>
@@ -248,6 +249,87 @@ function Dashboard() {
                   ))}
                 </div>
               )}
+            </div>
+          </div>
+
+          {/* POWER NETWORK */}
+          <div className="panel fade-in fade-in-delay-2" id="network">
+            <div className="panel__header">
+              <div className="panel__title"><span className="panel__title-icon">⚡</span> Power Network — First World Access</div>
+              <span className="panel__badge panel__badge--classified">INTEL</span>
+            </div>
+            <div className="panel__body">
+
+              {/* COMMUNITIES */}
+              <div style={{ marginBottom: 28 }}>
+                <div style={{ color: 'var(--accent-amber)', fontFamily: 'var(--font-mono)', fontSize: 11, letterSpacing: '0.15em', marginBottom: 12, borderBottom: '1px solid rgba(245,158,11,0.2)', paddingBottom: 8 }}>⊛ ELITE COMMUNITIES TO INFILTRATE ({data?.network?.communities?.length || 0})</div>
+                {(data?.network?.communities || []).map((c, i) => (
+                  <div className="opportunity-item" key={i}>
+                    <div className="opportunity-item__info">
+                      <a className="opportunity-item__title" href={c.link} target="_blank" rel="noopener noreferrer">{c.name}</a>
+                      <div className="opportunity-item__meta">
+                        <span style={{ color: c.type.startsWith('Free') ? 'var(--accent-green)' : 'var(--accent-amber)' }}>{c.type}</span>
+                      </div>
+                      <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 4, lineHeight: 1.5 }}>{c.description}</p>
+                      <p style={{ fontSize: 11, color: 'var(--accent-cyan)', marginTop: 6 }}>▶ {c.howToJoin}</p>
+                    </div>
+                    <a className="opportunity-item__link" href={c.link} target="_blank" rel="noopener noreferrer">Join →</a>
+                  </div>
+                ))}
+              </div>
+
+              {/* CONTACTS */}
+              <div style={{ marginBottom: 28 }}>
+                <div style={{ color: 'var(--accent-amber)', fontFamily: 'var(--font-mono)', fontSize: 11, letterSpacing: '0.15em', marginBottom: 12, borderBottom: '1px solid rgba(245,158,11,0.2)', paddingBottom: 8 }}>◆ DECISION-MAKER CONTACTS TO MESSAGE ({data?.network?.contacts?.length || 0})</div>
+                {(data?.network?.contacts || []).map((c, i) => (
+                  <div className="opportunity-item" key={i}>
+                    <div className="opportunity-item__info">
+                      <div className="opportunity-item__title">{c.name}</div>
+                      <div className="opportunity-item__meta"><span>{c.title}</span><span>🏢 {c.company}</span></div>
+                      <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 4, lineHeight: 1.5 }}>🎯 {c.pitch}</p>
+                      <div style={{ display: 'flex', gap: 12, marginTop: 6 }}>
+                        {c.twitter && <a href={c.twitter} target="_blank" rel="noopener noreferrer" style={{ fontSize: 11, color: 'var(--accent-cyan)', textDecoration: 'none' }}>𝕏 DM on X →</a>}
+                        {c.linkedin && <a href={c.linkedin} target="_blank" rel="noopener noreferrer" style={{ fontSize: 11, color: 'var(--accent-cyan)', textDecoration: 'none' }}>in LinkedIn →</a>}
+                        {c.email && <a href={`mailto:${c.email}`} style={{ fontSize: 11, color: 'var(--accent-cyan)', textDecoration: 'none' }}>✉ Email →</a>}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* WORLD LEADERS */}
+              {data?.network?.worldLeaders?.length > 0 && (
+                <div style={{ marginBottom: 28 }}>
+                  <div style={{ color: 'var(--accent-amber)', fontFamily: 'var(--font-mono)', fontSize: 11, letterSpacing: '0.15em', marginBottom: 12, borderBottom: '1px solid rgba(245,158,11,0.2)', paddingBottom: 8 }}>◉ WORLD DECISION-MAKERS — DAILY EMAIL TARGETS ({data?.network?.worldLeaders?.length || 0})</div>
+                  {(data?.network?.worldLeaders || []).map((w, i) => (
+                    <div className="opportunity-item" key={i}>
+                      <div className="opportunity-item__info">
+                        <div className="opportunity-item__title">{w.name}</div>
+                        <div className="opportunity-item__meta"><span>{w.title}</span><span>🌍 {w.country}</span></div>
+                        <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 4, lineHeight: 1.5 }}>🎯 {w.angle}</p>
+                        <div style={{ display: 'flex', gap: 12, marginTop: 6, flexWrap: 'wrap' }}>
+                          {w.email && <a href={`mailto:${w.email}`} style={{ fontSize: 11, color: 'var(--accent-cyan)', textDecoration: 'none' }}>✉ {w.email} →</a>}
+                          {w.contact && <a href={w.contact} target="_blank" rel="noopener noreferrer" style={{ fontSize: 11, color: 'var(--accent-cyan)', textDecoration: 'none' }}>📬 Contact Form →</a>}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* TARGET BUSINESSES */}
+              <div>
+                <div style={{ color: 'var(--accent-amber)', fontFamily: 'var(--font-mono)', fontSize: 11, letterSpacing: '0.15em', marginBottom: 12, borderBottom: '1px solid rgba(245,158,11,0.2)', paddingBottom: 8 }}>◈ TARGET BUSINESSES — PITCH YOUR SERVICES ({data?.network?.businesses?.length || 0})</div>
+                {(data?.network?.businesses || []).map((b, i) => (
+                  <div className="opportunity-item" key={i} style={{ flexDirection: 'column', alignItems: 'flex-start', gap: 6 }}>
+                    <div className="opportunity-item__title">{b.type}</div>
+                    <p style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.5 }}>📍 <strong style={{ color: 'var(--text-primary)' }}>Find them:</strong> {b.where}</p>
+                    <p style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.5 }}>⚡ <strong style={{ color: 'var(--text-primary)' }}>Pitch:</strong> {b.pitch}</p>
+                    <span style={{ fontSize: 11, color: 'var(--accent-green)', fontFamily: 'var(--font-mono)' }}>💰 {b.budget}</span>
+                  </div>
+                ))}
+              </div>
+
             </div>
           </div>
 

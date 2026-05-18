@@ -5,8 +5,9 @@
 
 import {
   JOB_SOURCES, JOB_KEYWORDS,
-  SCHOLARSHIP_SOURCES, SCHOLARSHIP_KEYWORDS, ELITE_SOURCES,
+  SCHOLARSHIP_SOURCES, SCHOLARSHIP_LEVEL_KEYWORDS, SCHOLARSHIP_TYPE_KEYWORDS, ELITE_SOURCES,
   CURATED_SCHOLARSHIPS,
+  POWER_NETWORK,
   BUSINESS_GRANT_SOURCES, BUSINESS_GRANT_KEYWORDS, CURATED_GRANTS,
   NEWS_SOURCES, VIDEO_CHANNELS,
   BOOK_ROTATION, RAINMAKER_PROFILES, NIGHT_SCHOOL_CASES,
@@ -298,10 +299,13 @@ async function fetchScholarships() {
     }
   }
 
-  // Filter by scholarship keywords
+  // Compound filter: must match a LEVEL keyword (masters/phd) AND a TYPE keyword (scholarship/fully funded)
+  // This eliminates internships, short courses, bachelor's programs, and generic news
   const filtered = allOpps.filter(opp => {
     const searchText = `${opp.title} ${opp.summary}`.toLowerCase();
-    return SCHOLARSHIP_KEYWORDS.some(kw => searchText.includes(kw.toLowerCase()));
+    const hasLevel = SCHOLARSHIP_LEVEL_KEYWORDS.some(kw => searchText.includes(kw));
+    const hasType = SCHOLARSHIP_TYPE_KEYWORDS.some(kw => searchText.includes(kw));
+    return hasLevel && hasType;
   });
 
   // Deduplicate
@@ -502,6 +506,7 @@ export async function GET() {
       isMonday: curated.isMonday,
       rainmaker: curated.rainmaker,
       nightSchool: curated.nightSchool,
+      network: POWER_NETWORK,
     };
 
     // Save to Supabase if configured
